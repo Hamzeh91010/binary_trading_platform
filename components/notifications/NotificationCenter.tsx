@@ -159,10 +159,13 @@ export default function NotificationCenter({ className }: NotificationCenterProp
         <Button variant="outline" size="sm" className={`relative ${className}`}>
           <Bell className="h-4 w-4" />
           {unreadCount > 0 && (
-            <div className="absolute -top-2 -right-2 h-6 w-6 flex items-center justify-center">
-              <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-75"></div>
-              <div className="relative bg-gradient-to-br from-red-500 to-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-900">
-                {unreadCount > 9 ? '9+' : unreadCount}
+            <div className="absolute -top-2 -right-2 flex items-center justify-center">
+              <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-purple-600 rounded-full animate-ping opacity-75 blur-sm"></div>
+              <div className="relative bg-gradient-to-r from-red-500 via-red-600 to-purple-600 text-white text-xs font-bold rounded-full px-2 py-1 min-w-[28px] h-6 flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-900">
+                <span className="relative inline-flex items-center">
+                  <span className="font-extrabold tracking-tight">{unreadCount > 9 ? '9+' : unreadCount}</span>
+                  <span className="ml-1 text-[10px] font-medium opacity-90 tracking-wide">new</span>
+                </span>
               </div>
             </div>
           )}
@@ -180,12 +183,12 @@ export default function NotificationCenter({ className }: NotificationCenterProp
             <Bell className="h-5 w-5" />
             <DropdownMenuLabel className="p-0">Notifications</DropdownMenuLabel>
             {unreadCount > 0 && (
-              <Badge variant="secondary" className="text-xs">
-                <span className="relative inline-flex items-center">
+              <Badge variant="secondary" className="text-xs px-3 py-1">
+                <span className="relative inline-flex items-center space-x-1">
                   <span className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full blur-sm opacity-75 animate-pulse"></span>
-                  <span className="relative inline-flex items-center px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs font-bold rounded-full shadow-lg border border-white/20">
-                    <span className="mr-1">{unreadCount}</span>
-                    <span className="text-blue-100">new</span>
+                  <span className="relative inline-flex items-center space-x-1 px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs font-bold rounded-full shadow-lg border border-white/20">
+                    <span className="font-extrabold">{unreadCount}</span>
+                    <span className="text-blue-100 font-medium">new</span>
                   </span>
                 </span>
               </Badge>
