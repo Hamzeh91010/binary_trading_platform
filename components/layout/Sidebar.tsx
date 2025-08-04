@@ -136,7 +136,7 @@ export default function Sidebar() {
 
       {/* Profile Modal */}
       <Dialog open={isProfileModalOpen} onOpenChange={setIsProfileModalOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <User className="h-5 w-5 text-blue-500" />
@@ -147,7 +147,7 @@ export default function Sidebar() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-6">
+          <div className="flex-1 overflow-y-auto space-y-6 pr-2">
             {/* Profile Information */}
             <Card>
               <CardHeader>
