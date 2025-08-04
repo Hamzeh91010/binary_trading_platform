@@ -317,24 +317,128 @@ export default function DashboardPage() {
         {/* Recent Signals */}
         <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Activity className="h-5 w-5 text-blue-600" />
-              <span>Recent Signals</span>
-            </CardTitle>
-            <CardDescription>Latest trading signals from today</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center space-x-2">
+                  <Activity className="h-5 w-5 text-blue-600" />
+                  <span>Recent Signals</span>
+                </CardTitle>
+                <CardDescription>Latest trading signals from today</CardDescription>
+              </div>
+              <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800">
+                {todaySignals.length} signals
+              </Badge>
+            </div>
           </CardHeader>
           <CardContent>
             {todaySignals.length === 0 ? (
-              <div className="text-center py-8">
-                <Activity className="h-12 w-12 mx-auto mb-4 text-gray-400 opacity-50" />
-                <p className="text-gray-500 dark:text-gray-400">No signals today</p>
+              <div className="text-center py-12">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-full blur-xl"></div>
+                  <Activity className="relative h-16 w-16 mx-auto mb-4 text-gray-400 opacity-50" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No signals today</h3>
+                <p className="text-gray-500 dark:text-gray-400">Waiting for new trading opportunities...</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {todaySignals.slice(0, 5).map((signal, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center space-x-2">
+                  <div key={index} className="group relative overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-gradient-to-r from-white to-gray-50 dark:from-gray-800 dark:to-gray-800/50 p-4 hover:shadow-lg hover:border-blue-200 dark:hover:border-blue-800 transition-all duration-300">
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <div className="relative flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="flex-shrink-0 relative">
+                          <div className={`absolute inset-0 rounded-full blur-sm ${
+                            signal.direction === 'BUY' ? 'bg-green-500/20' : 'bg-red-500/20'
+                          }`}></div>
+                          <div className={`relative w-10 h-10 rounded-full flex items-center justify-center ${
+                            signal.direction === 'BUY' 
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' 
+                              : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+                          }`}>
+                            {signal.direction === 'BUY' ? (
+                              <TrendingUp className="h-5 w-5" />
+                            ) : (
+                              <TrendingDown className="h-5 w-5" />
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-3 mb-1">
+                            <span className="text-lg font-semibold text-gray-900 dark:text-white">
+                              {signal.symbol}
+                            </span>
+                            <Badge 
+                              variant={signal.direction === 'BUY' ? 'default' : 'destructive'} 
+                              className="text-xs font-medium"
+                            >
+                              {signal.direction}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
+                            <div className="flex items-center space-x-1">
+                              <Clock className="h-3 w-3" />
+                              <span className="font-mono">
+                                {new Date(signal.created_at).toLocaleTimeString()}
+                              </span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <DollarSign className="h-3 w-3" />
+                              <span>Entry amount</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        {signal.result && (
+                          <div className="text-center">
+                            <Badge 
+                              className={`mb-1 ${
+                                signal.result === 'WIN' 
+                                  ? 'bg-green-600 text-white hover:bg-green-700' 
+                                  : 'bg-red-600 text-white hover:bg-red-700'
+                              }`}
+                            >
+                              {signal.result}
+                            </Badge>
+                          </div>
+                        )}
+                        <div className="text-right">
+                          <div className={`text-lg font-bold ${
+                            signal.total_profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                          }`}>
+                            {formatCurrency(signal.total_profit || 0)}
+                          </div>
+                          {signal.total_profit !== 0 && (
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {signal.total_profit >= 0 ? '+' : ''}{((signal.total_profit || 0) * 100 / 25).toFixed(1)}%
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                {todaySignals.length > 5 && (
+                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <Button 
+                      variant="outline" 
+                      className="w-full group hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-900/20 dark:hover:border-blue-800"
+                      onClick={() => window.location.href = '/signals'}
+                    >
+                      <Activity className="h-4 w-4 mr-2 group-hover:text-blue-600" />
+                      View All {todaySignals.length} Signals
+                      <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+@@ .. @@
+import { ArrowRight, Play, Square, Activity, Target, DollarSign, Zap, BarChart3, Clock, Users, Award, RefreshCw } from 'lucide-react';
                         {signal.direction === 'BUY' ? (
                           <TrendingUp className="h-5 w-5 text-green-500" />
                         ) : (
