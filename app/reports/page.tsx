@@ -742,45 +742,6 @@ export default function ReportsPage() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-600 dark:text-gray-400">Total Staked:</span>
-                  {/* Martingale Information */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center space-x-2">
-                        <Target className="h-5 w-5 text-orange-500" />
-                        <span>Martingale Information</span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Available Levels:</span>
-                        <Badge variant="outline">{selectedSignal.is_available_martingale_level}</Badge>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Current Trade Level:</span>
-                        <Badge variant="outline">{selectedSignal.trade_level}</Badge>
-                      </div>
-                      <div>
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Martingale Times:</span>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {getMartingaleTimes(selectedSignal).map((time, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs">
-                              {time}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Martingale Amounts:</span>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {getMartingaleAmounts(selectedSignal).map((amount, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              {formatCurrency(amount)}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
                         <span className="font-medium text-blue-600">{formatCurrency(selectedSignal.total_staked)}</span>
                       </div>
                     </CardContent>
