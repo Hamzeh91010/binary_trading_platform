@@ -67,6 +67,10 @@ export default function SignalsPage() {
     direction: 'BUY' as 'BUY' | 'SELL',
     trade_duration: '5 minutes',
   });
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalSignals, setModalSignals] = useState<Signal[]>([]);
+  const [modalType, setModalType] = useState<'winners' | 'losses' | 'pending'>('winners');
 
   // Mock data for live signals (pending/processing only)
   const mockLiveSignals: Signal[] = [
@@ -249,6 +253,32 @@ export default function SignalsPage() {
       console.error('Failed to delete signal:', error);
       toast.error('Failed to delete signal');
     }
+  };
+
+  const handleViewWinners = () => {
+    const winnerSignals = allSignals.filter(signal => signal.trading_result === 'win');
+    setModalSignals(winnerSignals);
+    setModalTitle('Winning Signals');
+    setModalType('winners');
+    setIsModalOpen(true);
+  };
+
+  const handleViewLosses = () => {
+    const lossSignals = allSignals.filter(signal => signal.trading_result === 'loss');
+    setModalSignals(lossSignals);
+    setModalTitle('Losing Signals');
+    setModalType('losses');
+    setIsModalOpen(true);
+  };
+
+  const handleViewPending = () => {
+    const pendingSignals = allSignals.filter(signal => 
+      signal.is_status === 'pending' || signal.is_status === 'processing'
+    );
+    setModalSignals(pendingSignals);
+    setModalTitle('Pending Signals');
+    setModalType('pending');
+    setIsModalOpen(true);
   };
 
   const handleViewDetails = (signal: Signal) => {
@@ -630,15 +660,27 @@ export default function SignalsPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Button variant="outline" className="h-16 flex flex-col space-y-2 hover:bg-blue-50 dark:hover:bg-blue-900/20">
+              <Button 
+                variant="outline" 
+                className="h-16 flex flex-col space-y-2 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                onClick={handleViewWinners}
+              >
                 <TrendingUp className="h-5 w-5 text-green-600" />
                 <span className="text-sm">View Winners</span>
               </Button>
-              <Button variant="outline" className="h-16 flex flex-col space-y-2 hover:bg-red-50 dark:hover:bg-red-900/20">
+              <Button 
+                variant="outline" 
+                className="h-16 flex flex-col space-y-2 hover:bg-red-50 dark:hover:bg-red-900/20"
+                onClick={handleViewLosses}
+              >
                 <TrendingDown className="h-5 w-5 text-red-600" />
                 <span className="text-sm">View Losses</span>
               </Button>
-              <Button variant="outline" className="h-16 flex flex-col space-y-2 hover:bg-yellow-50 dark:hover:bg-yellow-900/20">
+              <Button 
+                variant="outline" 
+                className="h-16 flex flex-col space-y-2 hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
+                onClick={handleViewPending}
+              >
                 <Clock className="h-5 w-5 text-yellow-600" />
                 <span className="text-sm">Pending Signals</span>
               </Button>
@@ -710,6 +752,139 @@ export default function SignalsPage() {
             />
           </CardContent>
         </Card>
+
+        {/* Signal Filter Modal */}
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <DialogTitle className="flex items-center space-x-2">
+                    {modalType === 'winners' && <TrendingUp className="h-5 w-5 text-green-500" />}
+                    {modalType === 'losses' && <TrendingDown className="h-5 w-5 text-red-500" />}
+                    {modalType === 'pending' && <Clock className="h-5 w-5 text-yellow-500" />}
+                    <span>{modalTitle}</span>
+                  </DialogTitle>
+                  <DialogDescription>
+                    {modalType === 'winners' && 'All signals that resulted in profitable trades'}
+                    {modalType === 'losses' && 'All signals that resulted in losing trades'}
+                    {modalType === 'pending' && 'All signals that are currently pending or being processed'}
+                  </DialogDescription>
+                </div>
+                <Badge 
+                  variant="outline" 
+                  className={`${
+                    modalType === 'winners' ? 'border-green-200 bg-green-50 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400' :
+                    modalType === 'losses' ? 'border-red-200 bg-red-50 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400' :
+                    'border-yellow-200 bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-400'
+                  }`}
+                >
+                  {modalSignals.length} signals
+                </Badge>
+              </div>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              {/* Summary Stats for Modal */}
+              {modalType === 'winners' && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                      {formatCurrency(modalSignals.reduce((sum, signal) => sum + (signal.total_profit || 0), 0))}
+                    </div>
+                    <div className="text-sm text-green-700 dark:text-green-300">Total Profit</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                      {modalSignals.length > 0 ? (modalSignals.reduce((sum, signal) => sum + (signal.total_profit || 0), 0) / modalSignals.length).toFixed(2) : '0.00'}
+                    </div>
+                    <div className="text-sm text-green-700 dark:text-green-300">Avg Profit per Trade</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                      {modalSignals.length > 0 ? Math.max(...modalSignals.map(s => s.total_profit || 0)).toFixed(2) : '0.00'}
+                    </div>
+                    <div className="text-sm text-green-700 dark:text-green-300">Best Trade</div>
+                  </div>
+                </div>
+              )}
+              
+              {modalType === 'losses' && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                      {formatCurrency(modalSignals.reduce((sum, signal) => sum + (signal.total_profit || 0), 0))}
+                    </div>
+                    <div className="text-sm text-red-700 dark:text-red-300">Total Loss</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                      {modalSignals.length > 0 ? (modalSignals.reduce((sum, signal) => sum + (signal.total_profit || 0), 0) / modalSignals.length).toFixed(2) : '0.00'}
+                    </div>
+                    <div className="text-sm text-red-700 dark:text-red-300">Avg Loss per Trade</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                      {modalSignals.length > 0 ? Math.min(...modalSignals.map(s => s.total_profit || 0)).toFixed(2) : '0.00'}
+                    </div>
+                    <div className="text-sm text-red-700 dark:text-red-300">Worst Trade</div>
+                  </div>
+                </div>
+              )}
+              
+              {modalType === 'pending' && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                      {modalSignals.filter(s => s.is_status === 'pending').length}
+                    </div>
+                    <div className="text-sm text-yellow-700 dark:text-yellow-300">Pending</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                      {modalSignals.filter(s => s.is_status === 'processing').length}
+                    </div>
+                    <div className="text-sm text-yellow-700 dark:text-yellow-300">Processing</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                      {formatCurrency(modalSignals.reduce((sum, signal) => sum + (signal.base_amount || 0), 0))}
+                    </div>
+                    <div className="text-sm text-yellow-700 dark:text-yellow-300">Total Amount at Risk</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Enhanced Signal Table for Modal */}
+              {modalSignals.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-gray-500/10 to-gray-500/10 rounded-full blur-xl"></div>
+                    {modalType === 'winners' && <TrendingUp className="relative h-16 w-16 mx-auto mb-4 text-gray-400 opacity-50" />}
+                    {modalType === 'losses' && <TrendingDown className="relative h-16 w-16 mx-auto mb-4 text-gray-400 opacity-50" />}
+                    {modalType === 'pending' && <Clock className="relative h-16 w-16 mx-auto mb-4 text-gray-400 opacity-50" />}
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                    No {modalType} signals found
+                  </h3>
+                  <p className="text-gray-500 dark:text-gray-400">
+                    {modalType === 'winners' && 'No winning trades to display'}
+                    {modalType === 'losses' && 'No losing trades to display'}
+                    {modalType === 'pending' && 'No pending or processing signals'}
+                  </p>
+                </div>
+              ) : (
+                <PremiumSignalsTable 
+                  signals={modalSignals}
+                  onUpdateSignal={handleUpdateSignal}
+                  onDeleteSignal={handleDeleteSignal}
+                  onViewDetails={handleViewDetails}
+                  onEdit={handleEdit}
+                />
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* View Details Dialog */}
