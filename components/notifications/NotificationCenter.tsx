@@ -159,11 +159,17 @@ export default function NotificationCenter({ className }: NotificationCenterProp
         <Button variant="outline" size="sm" className={`relative ${className}`}>
           <Bell className="h-4 w-4" />
           {unreadCount > 0 && (
-            <Badge 
-              className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 bg-red-500 text-white text-xs animate-pulse"
-            >
+            <div className="absolute -top-2 -right-2 h-6 w-6 flex items-center justify-center">
+              <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-75"></div>
+              <div className="relative bg-gradient-to-br from-red-500 to-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-900">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </div>
+            </div>
+          )}
+          {unreadCount > 0 && (
+            <span className="sr-only">
               {unreadCount > 9 ? '9+' : unreadCount}
-            </Badge>
+            </span>
           )}
         </Button>
       </DropdownMenuTrigger>
