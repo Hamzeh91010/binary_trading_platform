@@ -114,7 +114,7 @@ export default function Sidebar() {
             <div className="flex items-center w-full p-2">
               <div className="h-10 w-10 rounded-full overflow-hidden bg-blue-500 flex items-center justify-center mr-3 flex-shrink-0">
                 <img 
-                  src="/api/placeholder/40/40" 
+                  src="/hamzeh-profile.jpg" 
                   alt="Hamzeh" 
                   className="h-full w-full object-cover"
                   onError={(e) => {
@@ -157,7 +157,7 @@ export default function Sidebar() {
                 <div className="flex items-start space-x-4">
                   <div className="h-20 w-20 rounded-full overflow-hidden bg-blue-500 flex items-center justify-center flex-shrink-0">
                     <img 
-                      src="/api/placeholder/80/80" 
+                      src="/hamzeh-profile.jpg" 
                       alt="Hamzeh" 
                       className="h-full w-full object-cover"
                       onError={(e) => {
