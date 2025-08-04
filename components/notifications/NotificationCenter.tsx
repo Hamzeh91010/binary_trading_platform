@@ -194,25 +194,25 @@ export default function NotificationCenter({ className }: NotificationCenterProp
               </Badge>
             )}
           </div>
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center space-x-1 flex-shrink-0">
             {unreadCount > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={markAllAsRead}
-                className="h-8 px-2 text-xs"
+                className="h-8 px-2 text-xs whitespace-nowrap"
               >
                 <CheckCircle className="h-3 w-3 mr-1" />
-                Mark all read
+                Mark all
               </Button>
             )}
             <Button
               variant="ghost"
               size="sm"
               onClick={clearAllNotifications}
-              className="h-8 px-2 text-xs"
+              className="h-8 px-2 text-xs whitespace-nowrap"
             >
-              Clear all
+              Clear
             </Button>
           </div>
         </div>
