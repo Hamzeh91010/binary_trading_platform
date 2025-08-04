@@ -181,7 +181,13 @@ export default function NotificationCenter({ className }: NotificationCenterProp
             <DropdownMenuLabel className="p-0">Notifications</DropdownMenuLabel>
             {unreadCount > 0 && (
               <Badge variant="secondary" className="text-xs">
-                {unreadCount} new
+                <span className="relative inline-flex items-center">
+                  <span className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full blur-sm opacity-75 animate-pulse"></span>
+                  <span className="relative inline-flex items-center px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs font-bold rounded-full shadow-lg border border-white/20">
+                    <span className="mr-1">{unreadCount}</span>
+                    <span className="text-blue-100">new</span>
+                  </span>
+                </span>
               </Badge>
             )}
           </div>
