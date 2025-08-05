@@ -25,6 +25,13 @@ interface LogEntry {
   details?: string;
 }
 
+interface BotStats {
+  executionTime: string;
+  executionCount: number;
+  lastActivity: string;
+  status: 'running' | 'stopped';
+}
+
 export default function BotsPage() {
   const [bots, setBots] = useState<Bot[]>([
     {
@@ -47,6 +54,31 @@ export default function BotsPage() {
     }
   ]);
 
+  // Bot statistics state
+  const [botStats, setBotStats] = useState<Record<string, BotStats>>({
+    'forex_signals_listener': {
+      executionTime: '2d 14h 32m',
+      executionCount: 156,
+      lastActivity: '2 minutes ago',
+      status: 'running'
+    },
+    'forex_tradings_runner': {
+      executionTime: '2d 14h 30m',
+      executionCount: 142,
+      lastActivity: '1 minute ago',
+      status: 'running'
+    },
+    'forex_status_monitor': {
+      executionTime: '1d 8h 15m',
+      executionCount: 89,
+      lastActivity: '45 minutes ago',
+      status: 'stopped'
+    }
+  });
+
+  // Selected bot for filtering logs
+  const [selectedBotForLogs, setSelectedBotForLogs] = useState<string>('forex_signals_listener');
+
   useEffect(() => {
     const fetchBots = async () => {
       try {
@@ -66,6 +98,22 @@ export default function BotsPage() {
     };
 
     fetchBots();
+
+    // Update bot stats every 30 seconds
+    const statsInterval = setInterval(() => {
+      setBotStats(prev => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(botId => {
+          if (updated[botId].status === 'running') {
+            updated[botId].executionCount += Math.floor(Math.random() * 3);
+            updated[botId].lastActivity = 'Just now';
+          }
+        });
+        return updated;
+      });
+    }, 30000);
+
+    return () => clearInterval(statsInterval);
   }, []);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -80,7 +128,7 @@ export default function BotsPage() {
     {
       id: '1',
       timestamp: '2024-01-15 14:30:15',
-      botId: 'telegram_listener',
+      botId: 'forex_signals_listener',
       level: 'success',
       message: 'Signal saved: EUR/USD | Entry: 14:35',
       details: 'Signal ID: 12345, Channel: -1002846030923, Direction: BUY, Amount: $25'
@@ -88,7 +136,7 @@ export default function BotsPage() {
     {
       id: '2',
       timestamp: '2024-01-15 14:30:20',
-      botId: 'trade_signal_runner',
+      botId: 'forex_tradings_runner',
       level: 'info',
       message: 'Starting trade process for signal 12345',
       details: 'Entry time: 14:35, Pair: EUR/USD, Direction: BUY, Base amount: $25'
@@ -96,7 +144,7 @@ export default function BotsPage() {
     {
       id: '3',
       timestamp: '2024-01-15 14:30:25',
-      botId: 'telegram_listener',
+      botId: 'forex_signals_listener',
       level: 'info',
       message: 'New message received from -1002846030923',
       details: 'Channel: Forex Legend VIP, Message length: 156 chars'
@@ -104,7 +152,7 @@ export default function BotsPage() {
     {
       id: '4',
       timestamp: '2024-01-15 14:30:30',
-      botId: 'trade_signal_runner',
+      botId: 'forex_tradings_runner',
       level: 'success',
       message: 'Trade executed successfully',
       details: 'Result: WIN, Profit: +$21.25, Execution time: 2.3s'
@@ -112,15 +160,15 @@ export default function BotsPage() {
     {
       id: '5',
       timestamp: '2024-01-15 14:30:35',
-      botId: 'api_bot_manager',
+      botId: 'forex_status_monitor',
       level: 'info',
       message: 'Bot status updated',
-      details: 'Updated bots: telegram_listener, trade_signal_runner'
+      details: 'Updated bots: forex_signals_listener, forex_tradings_runner'
     },
     {
       id: '6',
       timestamp: '2024-01-15 14:29:45',
-      botId: 'trade_signal_runner',
+      botId: 'forex_tradings_runner',
       level: 'warning',
       message: 'Low payout detected: 72%',
       details: 'Signal: GBP/USD, Payout: 72%, Threshold: 75%, Action: Skipped'
@@ -128,7 +176,7 @@ export default function BotsPage() {
     {
       id: '7',
       timestamp: '2024-01-15 14:29:30',
-      botId: 'telegram_listener',
+      botId: 'forex_signals_listener',
       level: 'error',
       message: 'Connection timeout to Telegram API',
       details: 'Timeout after 30s, Retrying in 5s, Attempt: 2/3'
@@ -136,7 +184,7 @@ export default function BotsPage() {
     {
       id: '8',
       timestamp: '2024-01-15 14:29:35',
-      botId: 'telegram_listener',
+      botId: 'forex_signals_listener',
       level: 'success',
       message: 'Connection restored to Telegram API',
       details: 'Reconnected successfully, Latency: 120ms'
@@ -236,8 +284,8 @@ export default function BotsPage() {
     let filtered = detailedLogs;
 
     // Filter by bot
-    if (selectedBot && selectedBot !== 'all') {
-      filtered = filtered.filter(log => log.botId === selectedBot);
+    if (selectedBotForLogs && selectedBotForLogs !== 'all') {
+      filtered = filtered.filter(log => log.botId === selectedBotForLogs);
     }
 
     // Filter by level
@@ -260,6 +308,14 @@ export default function BotsPage() {
     }
 
     return filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  };
+
+  // Get filtered logs for Recent Bot Activity (only for selected bot)
+  const getRecentActivityLogs = () => {
+    return detailedLogs
+      .filter(log => log.botId === selectedBotForLogs)
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 5); // Show only last 5 entries
   };
 
   const getLevelColor = (level: string) => {
@@ -335,11 +391,11 @@ ${'='.repeat(80)}
 
   const getBotDescription = (botId: string) => {
     switch (botId) {
-      case 'telegram_listener':
+      case 'forex_signals_listener':
         return 'Monitors Telegram channels for trading signals';
-      case 'trade_signal_runner':
+      case 'forex_tradings_runner':
         return 'Executes trades based on received signals';
-      case 'api_bot_manager':
+      case 'forex_status_monitor':
         return 'Manages bot lifecycle and API endpoints';
       default:
         return 'Trading bot component';
@@ -416,7 +472,13 @@ ${'='.repeat(80)}
         {/* Bot Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {bots.map((bot) => (
-            <Card key={bot.id} className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+            <Card 
+              key={bot.id} 
+              className={`border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm cursor-pointer ${
+                selectedBotForLogs === bot.id ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
+              }`}
+              onClick={() => setSelectedBotForLogs(bot.id)}
+            >
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">{bot.id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</CardTitle>
@@ -430,7 +492,7 @@ ${'='.repeat(80)}
                 <CardDescription>{getBotDescription(bot.id)}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2 text-sm">
+                <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Script:</span>
                     <span className="font-mono">{getBotScript(bot.id)}</span>
@@ -441,6 +503,31 @@ ${'='.repeat(80)}
                       <span className="font-mono">{bot.pid}</span>
                     </div>
                   )}
+                  
+                  {/* Execution Statistics */}
+                  {botStats[bot.id] && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Execution Time:</span>
+                        <span className="font-mono text-blue-600 dark:text-blue-400">
+                          {botStats[bot.id].executionTime}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Executions:</span>
+                        <span className="font-mono text-purple-600 dark:text-purple-400">
+                          {botStats[bot.id].executionCount.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Last Activity:</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {botStats[bot.id].lastActivity}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                  
                   <div className="flex justify-between">
                     <span className="text-gray-600">Log:</span>
                     <Button 
@@ -486,12 +573,21 @@ ${'='.repeat(80)}
                     <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                   </Button>
                 </div>
+                
+                {/* Selection Indicator */}
+                {selectedBotForLogs === bot.id && (
+                  <div className="text-center">
+                    <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800">
+                      📊 Showing logs below
+                    </Badge>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
         </div>
 
-        {/* Bot Logs */}
+        {/* Recent Bot Activity */}
         <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -499,14 +595,19 @@ ${'='.repeat(80)}
                 <CardTitle className="flex items-center space-x-2">
                   <FileText className="h-5 w-5 text-blue-600" />
                   <span>Recent Bot Activity</span>
+                  <Badge variant="outline" className="ml-2">
+                    {selectedBotForLogs.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </Badge>
                 </CardTitle>
-                <CardDescription>Latest log entries from running bots</CardDescription>
+                <CardDescription>
+                  Latest log entries from {selectedBotForLogs.replace(/_/g, ' ')} - Click bot cards above to filter
+                </CardDescription>
               </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  setSelectedBot('all');
+                  setSelectedBot(selectedBotForLogs);
                   setIsLogsDialogOpen(true);
                 }}
               >
@@ -517,11 +618,17 @@ ${'='.repeat(80)}
           </CardHeader>
           <CardContent>
             <div className="space-y-2 font-mono text-sm bg-gray-900 text-green-400 p-4 rounded-lg max-h-64 overflow-y-auto">
-              <div>[2024-01-15 14:30:15] telegram_listener: ✅ Signal saved: EUR/USD | Entry: 14:35</div>
-              <div>[2024-01-15 14:30:20] trade_signal_runner: 🚀 Starting trade process for signal 12345</div>
-              <div>[2024-01-15 14:30:25] telegram_listener: 📥 New message received from -1002846030923</div>
-              <div>[2024-01-15 14:30:30] trade_signal_runner: ✅ Trade executed successfully</div>
-              <div>[2024-01-15 14:30:35] api_bot_manager: 📊 Bot status updated</div>
+              {getRecentActivityLogs().length === 0 ? (
+                <div className="text-center py-4 text-gray-500">
+                  No recent activity for {selectedBotForLogs.replace(/_/g, ' ')}
+                </div>
+              ) : (
+                getRecentActivityLogs().map((log) => (
+                  <div key={log.id} className={`${getLevelColor(log.level)}`}>
+                    [{log.timestamp}] {log.botId}: {getLevelIcon(log.level)} {log.message}
+                  </div>
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
@@ -553,9 +660,9 @@ ${'='.repeat(80)}
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Bots</SelectItem>
-                      <SelectItem value="telegram_listener">Telegram Listener</SelectItem>
-                      <SelectItem value="trade_signal_runner">Trade Signal Runner</SelectItem>
-                      <SelectItem value="api_bot_manager">API Bot Manager</SelectItem>
+                      <SelectItem value="forex_signals_listener">Forex Signals Listener</SelectItem>
+                      <SelectItem value="forex_tradings_runner">Forex Tradings Runner</SelectItem>
+                      <SelectItem value="forex_status_monitor">Forex Status Monitor</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
