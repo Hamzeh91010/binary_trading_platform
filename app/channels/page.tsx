@@ -12,13 +12,14 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Channel } from '@/lib/types';
+import { channelsApi } from '@/lib/api';
+import { signalsApi } from '@/lib/api';
 import { Plus, Edit2, Trash2, Radio, Eye, BarChart3, TrendingUp, TrendingDown, Target, DollarSign, Activity, Hash, Calendar, Clock, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { FileText } from 'lucide-react';
 import { formatCurrency, formatPercent } from '@/lib/utils';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar } from 'recharts';
-import { signalsApi } from '@/lib/api';
 
 interface ChannelAnalytics {
   totalSignals: number;
@@ -59,7 +60,7 @@ export default function ChannelsPage() {
   const [newChannel, setNewChannel] = useState({
     chat_id: '',
     channel_name: '',
-    channel_type: 'telegram',
+    channel_type: '',
     status: 'enabled' as 'enabled' | 'disabled'
   });
   const [editingChannel, setEditingChannel] = useState<Partial<PermissionChannel>>({});
@@ -79,32 +80,6 @@ export default function ChannelsPage() {
       toast.success('Channels loaded successfully');
     } catch (error) {
       console.error('Failed to fetch channels:', error);
-      // Fallback data
-      const fallbackChannels = [
-        {
-          id: 1,
-          chat_id: '-1002846030923',
-          channel_name: 'Forex Legend VIP',
-          channel_type: 'telegram',
-          status: 'enabled' as 'enabled' | 'disabled'
-        },
-        {
-          id: 2,
-          chat_id: '-1002721262804',
-          channel_name: 'Forex Legend Club 60',
-          channel_type: 'telegram',
-          status: 'enabled' as 'enabled' | 'disabled'
-        },
-        {
-          id: 3,
-          chat_id: '-1002723345001',
-          channel_name: 'Premium Signals',
-          channel_type: 'telegram',
-          status: 'disabled' as 'enabled' | 'disabled'
-        }
-      ];
-      setChannels(fallbackChannels);
-      setAvailableChannelTypes(['telegram', 'whatsapp', 'discord']);
       toast.error('Using demo data - backend not connected');
     } finally {
       setIsLoadingChannels(false);
@@ -126,12 +101,6 @@ export default function ChannelsPage() {
       setChannelSignalCounts(counts);
     } catch (error) {
       console.error('Failed to fetch signal counts:', error);
-      // Mock data for demonstration
-      setChannelSignalCounts({
-        'telegram': 156,
-        'whatsapp': 23,
-        'discord': 8
-      });
     }
   };
 
@@ -242,39 +211,7 @@ export default function ChannelsPage() {
 
     } catch (error) {
       console.error('Failed to fetch channel analytics:', error);
-      // Mock analytics data
-      setChannelAnalytics({
-        totalSignals: 156,
-        completedSignals: 142,
-        winRate: 78.5,
-        totalProfit: 2450.75,
-        avgProfit: 15.71,
-        bestPair: 'EUR/USD',
-        worstPair: 'GBP/JPY',
-        mostActivePair: 'EUR/USD',
-        pairDistribution: [
-          { pair: 'EUR/USD', count: 45, profit: 890.25 },
-          { pair: 'GBP/USD', count: 32, profit: 567.80 },
-          { pair: 'USD/JPY', count: 28, profit: 445.30 },
-          { pair: 'AUD/USD', count: 22, profit: 334.50 },
-          { pair: 'USD/CAD', count: 15, profit: 212.90 }
-        ],
-        resultDistribution: [
-          { name: 'Wins', value: 111, color: '#10b981' },
-          { name: 'Losses', value: 31, color: '#ef4444' },
-          { name: 'Pending', value: 14, color: '#6b7280' }
-        ],
-        dailyPerformance: [
-          { date: '2024-01-09', profit: 125.50, signals: 18 },
-          { date: '2024-01-10', profit: 234.75, signals: 22 },
-          { date: '2024-01-11', profit: 189.25, signals: 20 },
-          { date: '2024-01-12', profit: 345.80, signals: 25 },
-          { date: '2024-01-13', profit: 278.90, signals: 19 },
-          { date: '2024-01-14', profit: 456.25, signals: 28 },
-          { date: '2024-01-15', profit: 820.30, signals: 24 }
-        ],
-        recentSignals: []
-      });
+      toast.error('Failed to fetch channel analytics');
     } finally {
       setIsLoadingAnalytics(false);
     }

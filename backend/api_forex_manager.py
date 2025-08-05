@@ -8,8 +8,8 @@ from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
 from pathlib import Path
+from typing import Optional, List
 
 app = FastAPI()
 
@@ -42,6 +42,18 @@ class TradingStatusResponse(BaseModel):
     loss_limit_reached: bool
     trading_allowed: bool
     stop_reason: str = ""
+
+class Channel(BaseModel):
+    chat_id: str
+    channel_name: str
+    channel_type: str
+    status: str = "enabled"
+
+class ChannelUpdate(BaseModel):
+    chat_id: Optional[str] = None
+    channel_name: Optional[str] = None
+    channel_type: Optional[str] = None
+    status: Optional[str] = None
 
 def get_db_connection():
     """Get database connection to ForexSignals.db"""
@@ -412,6 +424,89 @@ async def resume_trading(req: Request):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+@app.get("/api/channels", response_model=List[dict])
+def get_channels():
+    """List all enabled channels (Telegram or WhatsApp)"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM permission_channel")
+        rows = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+        return [dict(zip(columns, row)) for row in rows]
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+    finally:
+        conn.close()
+
+@app.post("/api/channels")
+def add_channel(channel: Channel):
+    """Add a new monitored channel"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO permission_channel (chat_id, channel_name, channel_type, status)
+            VALUES (?, ?, ?, ?)
+        """, (channel.chat_id, channel.channel_name, channel.channel_type, channel.status))
+
+        conn.commit()
+        channel_id = cursor.lastrowid
+        conn.close()
+
+        return { "id": channel_id, **channel.dict() }
+
+    except sqlite3.IntegrityError:
+        return JSONResponse(content={"error": "Chat ID already exists"}, status_code=400)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+@app.put("/api/channels/{id}")
+def update_channel(id: int, updates: ChannelUpdate):
+    """Update a monitored channel"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        fields = []
+        values = []
+        for key, value in updates.dict(exclude_unset=True).items():
+            fields.append(f"{key} = ?")
+            values.append(value)
+
+        if not fields:
+            raise HTTPException(status_code=400, detail="No fields to update")
+
+        values.append(id)
+        cursor.execute(f"""
+            UPDATE permission_channel SET {', '.join(fields)} WHERE id = ?
+        """, values)
+
+        conn.commit()
+        conn.close()
+
+        return { "id": id, **updates.dict() }
+
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+@app.delete("/api/channels/{id}")
+def delete_channel(id: int):
+    """Delete a channel by ID"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("DELETE FROM permission_channel WHERE id = ?", (id,))
+        conn.commit()
+        conn.close()
+
+        return { "status": "deleted", "id": id }
+
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+    
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

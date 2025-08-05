@@ -50,3 +50,12 @@ export interface Bot {
   pid?: number;
   log: string;
 }
+
+// @/lib/types.ts
+export interface Channel {
+  id: number;
+  chat_id: string;
+  channel_name: string;
+  channel_type: string;
+  status: 'enabled' | 'disabled';
+}
