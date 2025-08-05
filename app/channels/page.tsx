@@ -509,16 +509,33 @@ export default function ChannelsPage() {
                     </div>
                     <div>
                       <Label htmlFor="channel_type">Channel Type</Label>
-                      <Select value={newChannel.channel_type} onValueChange={(value) => setNewChannel({ ...newChannel, channel_type: value })}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="telegram">Telegram</SelectItem>
-                          <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                          <SelectItem value="discord">Discord</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="space-y-2">
+                        <Select value={newChannel.channel_type} onValueChange={(value) => setNewChannel({ ...newChannel, channel_type: value })}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select or type channel type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableChannelTypes.map(type => (
+                              <SelectItem key={type} value={type}>
+                                {type.charAt(0).toUpperCase() + type.slice(1)}
+                              </SelectItem>
+                            ))}
+                            <SelectItem value="telegram">Telegram</SelectItem>
+                            <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                            <SelectItem value="discord">Discord</SelectItem>
+                            <SelectItem value="custom">Custom Type...</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          placeholder="Or type custom channel type"
+                          value={newChannel.channel_type}
+                          onChange={(e) => setNewChannel({ ...newChannel, channel_type: e.target.value })}
+                          className="text-sm"
+                        />
+                        <p className="text-xs text-gray-500">
+                          Select from existing types or enter a custom channel type
+                        </p>
+                      </div>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Switch
@@ -637,24 +654,36 @@ export default function ChannelsPage() {
                 </div>
                 <div>
                   <Label htmlFor="edit_channel_type">Channel Type</Label>
-                  <Select 
-                    value={editingChannel.channel_type || ''} 
-                    onValueChange={(value) => setEditingChannel({ ...editingChannel, channel_type: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableChannelTypes.map(type => (
-                        <SelectItem key={type} value={type}>
-                          {type.charAt(0).toUpperCase() + type.slice(1)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Available types from permission_channel table
-                  </p>
+                  <div className="space-y-2">
+                    <Select 
+                      value={editingChannel.channel_type || ''} 
+                      onValueChange={(value) => setEditingChannel({ ...editingChannel, channel_type: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select or type channel type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableChannelTypes.map(type => (
+                          <SelectItem key={type} value={type}>
+                            {type.charAt(0).toUpperCase() + type.slice(1)}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="telegram">Telegram</SelectItem>
+                        <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                        <SelectItem value="discord">Discord</SelectItem>
+                        <SelectItem value="custom">Custom Type...</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      placeholder="Or type custom channel type"
+                      value={editingChannel.channel_type || ''}
+                      onChange={(e) => setEditingChannel({ ...editingChannel, channel_type: e.target.value })}
+                      className="text-sm"
+                    />
+                    <p className="text-xs text-gray-500">
+                      Select from existing types or enter a custom channel type
+                    </p>
+                  </div>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Switch
