@@ -35,35 +35,25 @@ interface ChannelAnalytics {
   recentSignals: Array<any>;
 }
 
+interface PermissionChannel {
+  id: number;
+  channel_type: string;
+  channel_name: string;
+  chat_id: string;
+  status: 'enabled' | 'disabled';
+  created_at?: string;
+  updated_at?: string;
+}
 export default function ChannelsPage() {
-  const [channels, setChannels] = useState<Channel[]>([
-    {
-      id: 1,
-      chat_id: '-1002846030923',
-      channel_name: 'Forex Legend VIP',
-      channel_type: 'telegram',
-      status: 'enabled'
-    },
-    {
-      id: 2,
-      chat_id: '-1002721262804',
-      channel_name: 'Forex Legend Club 60',
-      channel_type: 'telegram',
-      status: 'enabled'
-    },
-    {
-      id: 3,
-      chat_id: '-1002723345001',
-      channel_name: 'Premium Signals',
-      channel_type: 'telegram',
-      status: 'disabled'
-    }
-  ]);
+  const [channels, setChannels] = useState<PermissionChannel[]>([]);
+  const [availableChannelTypes, setAvailableChannelTypes] = useState<string[]>([]);
+  const [isLoadingChannels, setIsLoadingChannels] = useState(true);
 
   const [channelSignalCounts, setChannelSignalCounts] = useState<Record<string, number>>({});
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAnalyticsDialogOpen, setIsAnalyticsDialogOpen] = useState(false);
-  const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
+  const [selectedChannel, setSelectedChannel] = useState<PermissionChannel | null>(null);
   const [channelAnalytics, setChannelAnalytics] = useState<ChannelAnalytics | null>(null);
   const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false);
   const [newChannel, setNewChannel] = useState({
@@ -72,7 +62,54 @@ export default function ChannelsPage() {
     channel_type: 'telegram',
     status: 'enabled' as 'enabled' | 'disabled'
   });
+  const [editingChannel, setEditingChannel] = useState<Partial<PermissionChannel>>({});
 
+  // Fetch channels from permission_channel table
+  const fetchChannels = async () => {
+    setIsLoadingChannels(true);
+    try {
+      const response = await channelsApi.getChannels();
+      const channelsData = response.data || [];
+      setChannels(channelsData);
+      
+      // Extract unique channel types for the dropdown
+      const types = [...new Set(channelsData.map((ch: PermissionChannel) => ch.channel_type))];
+      setAvailableChannelTypes(types.length > 0 ? types : ['telegram', 'whatsapp', 'discord']);
+      
+      toast.success('Channels loaded successfully');
+    } catch (error) {
+      console.error('Failed to fetch channels:', error);
+      // Fallback data
+      const fallbackChannels = [
+        {
+          id: 1,
+          chat_id: '-1002846030923',
+          channel_name: 'Forex Legend VIP',
+          channel_type: 'telegram',
+          status: 'enabled' as 'enabled' | 'disabled'
+        },
+        {
+          id: 2,
+          chat_id: '-1002721262804',
+          channel_name: 'Forex Legend Club 60',
+          channel_type: 'telegram',
+          status: 'enabled' as 'enabled' | 'disabled'
+        },
+        {
+          id: 3,
+          chat_id: '-1002723345001',
+          channel_name: 'Premium Signals',
+          channel_type: 'telegram',
+          status: 'disabled' as 'enabled' | 'disabled'
+        }
+      ];
+      setChannels(fallbackChannels);
+      setAvailableChannelTypes(['telegram', 'whatsapp', 'discord']);
+      toast.error('Using demo data - backend not connected');
+    } finally {
+      setIsLoadingChannels(false);
+    }
+  };
   // Fetch signal counts for each channel
   const fetchChannelSignalCounts = async () => {
     try {
@@ -99,7 +136,7 @@ export default function ChannelsPage() {
   };
 
   // Fetch detailed analytics for a specific channel
-  const fetchChannelAnalytics = async (channel: Channel) => {
+  const fetchChannelAnalytics = async (channel: PermissionChannel) => {
     setIsLoadingAnalytics(true);
     try {
       const response = await signalsApi.getAllSignals();
@@ -244,41 +281,92 @@ export default function ChannelsPage() {
   };
 
   useEffect(() => {
+    fetchChannels();
     fetchChannelSignalCounts();
   }, []);
 
-  const handleToggleStatus = (id: number) => {
-    setChannels(prev => prev.map(channel => 
-      channel.id === id 
-        ? { ...channel, status: channel.status === 'enabled' ? 'disabled' : 'enabled' }
-        : channel
-    ));
-    toast.success('Channel status updated');
+  const handleToggleStatus = async (id: number) => {
+    try {
+      const channel = channels.find(ch => ch.id === id);
+      if (!channel) return;
+
+      const newStatus = channel.status === 'enabled' ? 'disabled' : 'enabled';
+      await channelsApi.updateChannel(id, { status: newStatus });
+      
+      setChannels(prev => prev.map(channel => 
+        channel.id === id 
+          ? { ...channel, status: newStatus }
+          : channel
+      ));
+      toast.success('Channel status updated');
+    } catch (error) {
+      toast.error('Failed to update channel status');
+    }
   };
 
-  const handleDeleteChannel = (id: number) => {
-    setChannels(prev => prev.filter(channel => channel.id !== id));
-    toast.success('Channel deleted successfully');
+  const handleDeleteChannel = async (id: number) => {
+    try {
+      await channelsApi.deleteChannel(id);
+      setChannels(prev => prev.filter(channel => channel.id !== id));
+      toast.success('Channel deleted successfully');
+    } catch (error) {
+      toast.error('Failed to delete channel');
+    }
   };
 
-  const handleAddChannel = () => {
-    const channel: Channel = {
-      id: Date.now(),
-      ...newChannel
-    };
+  const handleAddChannel = async () => {
+    try {
+      const response = await channelsApi.addChannel(newChannel);
+      const addedChannel = response.data;
+      
+      setChannels(prev => [addedChannel, ...prev]);
+      setIsAddDialogOpen(false);
+      setNewChannel({
+        chat_id: '',
+        channel_name: '',
+        channel_type: availableChannelTypes[0] || 'telegram',
+        status: 'enabled'
+      });
+      toast.success('Channel added successfully');
+    } catch (error) {
+      toast.error('Failed to add channel');
+    }
+  };
 
-    setChannels(prev => [channel, ...prev]);
-    setIsAddDialogOpen(false);
-    setNewChannel({
-      chat_id: '',
-      channel_name: '',
-      channel_type: 'telegram',
-      status: 'enabled'
+  const handleEditChannel = (channel: PermissionChannel) => {
+    setSelectedChannel(channel);
+    setEditingChannel({
+      id: channel.id,
+      channel_name: channel.channel_name,
+      chat_id: channel.chat_id,
+      channel_type: channel.channel_type,
+      status: channel.status
     });
-    toast.success('Channel added successfully');
+    setIsEditDialogOpen(true);
   };
 
-  const handleViewAnalytics = async (channel: Channel) => {
+  const handleSaveEditChannel = async () => {
+    try {
+      if (!selectedChannel || !editingChannel.id) return;
+      
+      await channelsApi.updateChannel(editingChannel.id, editingChannel);
+      
+      setChannels(prev => prev.map(channel => 
+        channel.id === editingChannel.id 
+          ? { ...channel, ...editingChannel }
+          : channel
+      ));
+      
+      setIsEditDialogOpen(false);
+      setSelectedChannel(null);
+      setEditingChannel({});
+      toast.success('Channel updated successfully');
+    } catch (error) {
+      toast.error('Failed to update channel');
+    }
+  };
+
+  const handleViewAnalytics = async (channel: PermissionChannel) => {
     setSelectedChannel(channel);
     setIsAnalyticsDialogOpen(true);
     await fetchChannelAnalytics(channel);
@@ -294,6 +382,8 @@ export default function ChannelsPage() {
         <Header 
           title="Channel Management" 
           subtitle="Manage signal sources and channels with real-time monitoring and analytics"
+          onRefresh={fetchChannels}
+          isLoading={isLoadingChannels}
         />
 
         {/* Header Section */}
@@ -447,6 +537,11 @@ export default function ChannelsPage() {
             </div>
           </CardHeader>
           <CardContent>
+            {isLoadingChannels ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            ) : (
             <div className="space-y-4">
               {channels.map((channel) => (
                 <div key={channel.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
@@ -489,7 +584,11 @@ export default function ChannelsPage() {
                       checked={channel.status === 'enabled'}
                       onCheckedChange={() => handleToggleStatus(channel.id)}
                     />
-                    <Button variant="ghost" size="sm">
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleEditChannel(channel)}
+                    >
                       <Edit2 className="h-4 w-4" />
                     </Button>
                     <Button 
@@ -503,9 +602,80 @@ export default function ChannelsPage() {
                 </div>
               ))}
             </div>
+            )}
           </CardContent>
         </Card>
 
+        {/* Edit Channel Modal */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Channel</DialogTitle>
+              <DialogDescription>
+                Update channel information from permission_channel table
+              </DialogDescription>
+            </DialogHeader>
+            {selectedChannel && (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="edit_channel_name">Channel Name</Label>
+                  <Input
+                    id="edit_channel_name"
+                    value={editingChannel.channel_name || ''}
+                    onChange={(e) => setEditingChannel({ ...editingChannel, channel_name: e.target.value })}
+                    placeholder="Channel name"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit_chat_id">Chat ID</Label>
+                  <Input
+                    id="edit_chat_id"
+                    value={editingChannel.chat_id || ''}
+                    onChange={(e) => setEditingChannel({ ...editingChannel, chat_id: e.target.value })}
+                    placeholder="Chat ID"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit_channel_type">Channel Type</Label>
+                  <Select 
+                    value={editingChannel.channel_type || ''} 
+                    onValueChange={(value) => setEditingChannel({ ...editingChannel, channel_type: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableChannelTypes.map(type => (
+                        <SelectItem key={type} value={type}>
+                          {type.charAt(0).toUpperCase() + type.slice(1)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Available types from permission_channel table
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="edit_status"
+                    checked={editingChannel.status === 'enabled'}
+                    onCheckedChange={(checked) => setEditingChannel({ ...editingChannel, status: checked ? 'enabled' : 'disabled' })}
+                  />
+                  <Label htmlFor="edit_status">Enable channel</Label>
+                </div>
+                <div className="flex justify-end space-x-2">
+                  <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSaveEditChannel}>
+                    Save Changes
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
         {/* Channel Configuration Help */}
         <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
           <CardHeader>
@@ -534,6 +704,13 @@ export default function ChannelsPage() {
                 <p className="text-sm text-gray-600">
                   WhatsApp integration requires additional setup with WhatsApp Business API.
                   Contact support for configuration assistance.
+                </p>
+              </div>
+              <div>
+                <h4 className="font-medium mb-2">Database Integration</h4>
+                <p className="text-sm text-gray-600">
+                  All channels are stored in the <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">permission_channel</code> table.
+                  Channel types are dynamically loaded from existing database entries.
                 </p>
               </div>
             </div>
