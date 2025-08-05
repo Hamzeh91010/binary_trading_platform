@@ -109,11 +109,11 @@ export default function Header({ title, subtitle, onRefresh, isLoading }: Header
       );
     }
 
-    return (
-      <Badge className="bg-blue-600 text-white hover:bg-blue-700">
-        Active Trading
-      </Badge>
-    );
+    // return (
+    //   <Badge className="bg-blue-600 text-white hover:bg-blue-700">
+    //     Active Trading
+    //   </Badge>
+    // );
   };
 
   return (

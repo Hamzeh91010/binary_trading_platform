@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"next dev\" \"python backend/api_bot_manager.py\"",
+    "dev": "concurrently \"next dev\" \"python backend/api_forex_manager.py\"",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -68,5 +68,8 @@
     "typescript": "5.2.2",
     "vaul": "^0.9.9",
     "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
   }
 }

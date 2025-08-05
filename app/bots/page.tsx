@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Bot } from '@/lib/types';
+import { botApi } from '@/lib/api';
 import { Play, Square, RefreshCw, FileText, AlertCircle, Download, Eye, Filter, Calendar, Activity, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -27,23 +28,45 @@ interface LogEntry {
 export default function BotsPage() {
   const [bots, setBots] = useState<Bot[]>([
     {
-      id: 'telegram_listener',
+      id: 'forex_signals_listener',
       status: 'running',
       pid: 12345,
       log: '/path/to/telegram_listener_output.log'
     },
     {
-      id: 'trade_signal_runner',
+      id: 'forex_tradings_runner',
       status: 'running',
       pid: 12346,
       log: '/path/to/trade_signal_runner_output.log'
     },
     {
-      id: 'api_bot_manager',
+      id: 'forex_status_monitor',
       status: 'stopped',
+      pid: 12347,
       log: '/path/to/api_bot_manager_output.log'
     }
   ]);
+
+  useEffect(() => {
+    const fetchBots = async () => {
+      try {
+        const res = await botApi.getStatus(); // GET /api/bots/status
+        const updatedBots = bots.map(bot => {
+          const updated = res.data.find((b: Bot) => b.id === bot.id);
+          return {
+            ...bot,
+            status: updated?.status ?? 'N/A',
+            pid: updated?.pid ?? 'N/A',
+          };
+        });
+        setBots(updatedBots);
+      } catch (err) {
+        toast.error('Failed to fetch bot status');
+      }
+    };
+
+    fetchBots();
+  }, []);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isLogsDialogOpen, setIsLogsDialogOpen] = useState(false);
@@ -120,20 +143,40 @@ export default function BotsPage() {
     }
   ]);
 
+  // Function to start a bot
   const handleStartBot = async (botId: string) => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setBots(prev => prev.map(bot => 
-        bot.id === botId 
-          ? { ...bot, status: 'running', pid: Math.floor(Math.random() * 90000) + 10000 }
-          : bot
-      ));
-      toast.success(`Bot ${botId} started successfully`);
-    } catch (error) {
-      toast.error(`Failed to start bot ${botId}`);
+      const script = getBotScript(botId);
+      const res = await botApi.startBot(botId, script); // { status, pid, log }
+
+      const isStarted = ['running', 'already_running'].includes(res.data.status);
+
+      // Update state
+      setBots(prevBots =>
+        prevBots.map(bot =>
+          bot.id === botId
+            ? {
+                ...bot,
+                status: isStarted ? 'running' : 'N/A',
+                pid: isStarted ? res.data.pid ?? 'N/A' : 'N/A',
+              }
+            : bot
+        )
+      );
+
+      if (res.data.status === 'running') {
+        toast.success(`Bot ${botId} started`);
+      } else if (res.data.status === 'already_running') {
+        toast.warning(`Bot ${botId} is already running`);
+      } else {
+        console.error("StartBot error response:", res.data); // ⬅️ log backend details
+        toast.error(
+          `Failed to start ${botId}: ${res.data.message ?? 'No error message returned'}`
+        );
+      }
+    } catch (err) {
+      toast.error(`Failed to start ${botId}`);
     } finally {
       setIsLoading(false);
     }
@@ -142,17 +185,30 @@ export default function BotsPage() {
   const handleStopBot = async (botId: string) => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setBots(prev => prev.map(bot => 
-        bot.id === botId 
-          ? { ...bot, status: 'stopped', pid: undefined }
-          : bot
-      ));
-      toast.success(`Bot ${botId} stopped successfully`);
-    } catch (error) {
-      toast.error(`Failed to stop bot ${botId}`);
+      const res = await botApi.stopBot(botId); // { status: 'stopped' | 'already_stopped' | 'not_found', pid }
+
+      // If stopped or already_stopped → treat as shut down
+      const isShutDown = ['stopped', 'already_stopped'].includes(res.data.status);
+
+      setBots(prevBots =>
+        prevBots.map(bot =>
+          bot.id === botId
+            ? {
+                ...bot,
+                status: isShutDown ? 'N/A' : bot.status,
+                pid: isShutDown ? 'N/A' : bot.pid,
+              }
+            : bot
+        )
+      );
+
+      if (isShutDown) {
+        toast.success(`Bot ${botId} has been shut down`);
+      } else {
+        toast.warning(`Bot ${botId} was not found`);
+      }
+    } catch (err) {
+      toast.error(`Failed to stop ${botId}`);
     } finally {
       setIsLoading(false);
     }
@@ -292,11 +348,11 @@ ${'='.repeat(80)}
 
   const getBotScript = (botId: string) => {
     switch (botId) {
-      case 'telegram_listener':
+      case 'forex_signals_listener':
         return 'telegram_listener_client.py';
-      case 'trade_signal_runner':
+      case 'forex_tradings_runner':
         return 'trade_signal_runner.py';
-      case 'api_bot_manager':
+      case 'forex_status_monitor':
         return 'api_bot_manager.py';
       default:
         return 'unknown.py';
