@@ -14,7 +14,7 @@ export interface TradingStatus {
 
 export interface Signal {
   message_id: number;
-  channel_type: 'telegram' | 'whatsapp' | 'primary'; // Extend if needed
+  channel_type: 'whatsapp' | 'primary'; // Extend if needed
   received_at: string; // ISO string format (e.g., '2024-01-15T13:45:00')
   pair: string; // Example: 'EUR/USD'
   base_amount: number;

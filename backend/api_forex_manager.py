@@ -28,7 +28,7 @@ processes = {}
 class StartBotRequest(BaseModel):
     botId: str
     script: str
-    workingDir: str = "../telegram_signal_bot"
+    workingDir: str = "D:/Pavlo_works/telegram_signal_bot"
 
 class TradingStatusResponse(BaseModel):
     today_profit: float
