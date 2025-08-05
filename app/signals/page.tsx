@@ -72,130 +72,6 @@ export default function SignalsPage() {
   const [modalSignals, setModalSignals] = useState<Signal[]>([]);
   const [modalType, setModalType] = useState<'winners' | 'losses' | 'pending'>('winners');
 
-  // Mock data for live signals (pending/processing only)
-  const mockLiveSignals: Signal[] = [
-    {
-      message_id: 1002,
-      channel_type: 'telegram',
-      received_at: '2024-01-15 12:30:00',
-      pair: 'GBP/USD',
-      base_amount: 30,
-      entry_time: '13:00',
-      end_time: '13:05',
-      martingale_times: ['13:05', '13:10', '13:15'],
-      martingale_amounts: [30, 60, 120],
-      is_available_martingale_level: 3,
-      direction: 'SELL',
-      trade_duration: '5 minutes',
-      is_otc: false,
-      is_status: 'pending',
-      trading_result: undefined,
-      payout_percent: 80,
-      trade_level: 0,
-      total_profit: 0,
-      total_staked: 0,
-      raw_text: 'GBP/USD SELL 13:00',
-      is_executed: false,
-    },
-    {
-      message_id: 1003,
-      channel_type: 'telegram',
-      received_at: '2024-01-15 11:15:00',
-      pair: 'Apple OTC',
-      base_amount: 20,
-      entry_time: '11:45',
-      end_time: '11:50',
-      martingale_times: ['11:50', '11:55', '12:00'],
-      martingale_amounts: [20, 40, 80],
-      is_available_martingale_level: 3,
-      direction: 'BUY',
-      trade_duration: '5 minutes',
-      is_otc: true,
-      is_status: 'processing',
-      trading_result: undefined,
-      payout_percent: 78,
-      trade_level: 1,
-      total_profit: 0,
-      total_staked: 20,
-      raw_text: 'Apple OTC BUY 11:45',
-      is_executed: true,
-    },
-  ];
-
-  // Mock data for all signals (including completed)
-  const mockAllSignals: Signal[] = [
-    {
-      message_id: 1001,
-      channel_type: 'telegram',
-      received_at: '2024-01-15 13:45:00',
-      pair: 'EUR/USD',
-      base_amount: 25,
-      entry_time: '14:30',
-      end_time: '14:35',
-      martingale_times: ['14:35', '14:40', '14:45'],
-      martingale_amounts: [25, 50, 100],
-      is_available_martingale_level: 3,
-      direction: 'BUY',
-      trade_duration: '5 minutes',
-      is_otc: false,
-      is_status: 'completed',
-      trading_result: 'win',
-      payout_percent: 85,
-      trade_level: 0,
-      total_profit: 21.25,
-      total_staked: 25,
-      raw_text: 'EUR/USD BUY 14:30',
-      is_executed: true,
-    },
-    ...mockLiveSignals,
-    {
-      message_id: 1004,
-      channel_type: 'telegram',
-      received_at: '2024-01-15 10:20:00',
-      pair: 'USD/JPY',
-      base_amount: 35,
-      entry_time: '10:45',
-      end_time: '10:50',
-      martingale_times: ['10:50', '10:55', '11:00'],
-      martingale_amounts: [35, 70, 140],
-      is_available_martingale_level: 3,
-      direction: 'SELL',
-      trade_duration: '5 minutes',
-      is_otc: false,
-      is_status: 'completed',
-      trading_result: 'loss',
-      payout_percent: 82,
-      trade_level: 0,
-      total_profit: -35,
-      total_staked: 35,
-      raw_text: 'USD/JPY SELL 10:45',
-      is_executed: true,
-    },
-    {
-      message_id: 1005,
-      channel_type: 'telegram',
-      received_at: '2024-01-15 09:15:00',
-      pair: 'Microsoft OTC',
-      base_amount: 40,
-      entry_time: '09:30',
-      end_time: '09:35',
-      martingale_times: ['09:35', '09:40', '09:45'],
-      martingale_amounts: [40, 80, 160],
-      is_available_martingale_level: 3,
-      direction: 'BUY',
-      trade_duration: '5 minutes',
-      is_otc: true,
-      is_status: 'expired',
-      trading_result: undefined,
-      payout_percent: 75,
-      trade_level: 0,
-      total_profit: 0,
-      total_staked: 0,
-      raw_text: 'Microsoft OTC BUY 09:30',
-      is_executed: false,
-    },
-  ];
-
   useEffect(() => {
     fetchSignals();
     // Update current time every second for edit restrictions
@@ -209,16 +85,15 @@ export default function SignalsPage() {
     setIsLoading(true);
     try {
       // For now, use mock data. Replace with actual API call when backend is ready
-      // const response = await signalsApi.getTodaySignals();
-      // setLiveSignals(response.data.filter(s => ['pending', 'processing'].includes(s.is_status)));
-      // setAllSignals(response.data);
-      setLiveSignals(mockLiveSignals);
-      setAllSignals(mockAllSignals);
+      const response_today = await signalsApi.getTodaySignals();
+      const response_all = await signalsApi.getAllSignals();
+      setLiveSignals(response_today.data.filter(s => ['pending', 'processing'].includes(s.is_status)));
+      setAllSignals(response_all.data);
+      // setLiveSignals(mockLiveSignals);
+      // setAllSignals(mockAllSignals);
       toast.success('Signals loaded successfully');
     } catch (error) {
       console.error('Failed to fetch signals:', error);
-      setLiveSignals(mockLiveSignals); // Fallback to mock data
-      setAllSignals(mockAllSignals);
       toast.error('Failed to fetch signals, showing demo data');
     } finally {
       setIsLoading(false);

@@ -4,8 +4,12 @@ import sys
 import sqlite3
 from datetime import datetime
 from fastapi import FastAPI, Request
+from fastapi import HTTPException
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import Optional
+from pathlib import Path
 
 app = FastAPI()
 
@@ -41,8 +45,12 @@ class TradingStatusResponse(BaseModel):
 
 def get_db_connection():
     """Get database connection to ForexSignals.db"""
-    db_path = os.path.join(os.path.dirname(__file__), "../telegram_signal_bot/ForexSignals.db")
-    return sqlite3.connect(db_path)
+    db_path = Path("D:/Pavlo_works/telegram_signal_bot/ForexSignals.db")
+    print("🔍 Using DB path:", db_path)  # DEBUG: Print path
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 def calculate_trading_status():
     """Calculate current trading status from database"""
@@ -141,6 +149,127 @@ def calculate_trading_status():
             "trading_allowed": True,
             "stop_reason": "Error calculating status"
         }
+
+@app.get("/api/signals/today")
+def get_today_signals():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM today_signals ORDER BY received_at DESC")
+        rows = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+        signals = [dict(zip(columns, row)) for row in rows]
+        return JSONResponse(content=signals)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+    finally:
+        conn.close()
+
+@app.get("/api/signals/all")
+def get_all_signals(status: Optional[str] = None, pair: Optional[str] = None):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        base_query = "SELECT * FROM all_signals WHERE 1=1"
+        params = []
+
+        if status:
+            base_query += " AND is_status = ?"
+            params.append(status)
+
+        if pair:
+            base_query += " AND pair = ?"
+            params.append(pair)
+
+        base_query += " ORDER BY received_at DESC"
+
+        cursor.execute(base_query, params)
+        rows = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+        signals = [dict(zip(columns, row)) for row in rows]
+        return JSONResponse(content=signals)
+
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+    finally:
+        conn.close()
+
+@app.put("/api/signals/{message_id}")
+async def update_signal(message_id: int, request: Request):
+    try:
+        data = await request.json()
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Build dynamic SET clause
+        set_clause = ", ".join([f"{key} = ?" for key in data.keys()])
+        values = list(data.values())
+        values.append(message_id)
+
+        cursor.execute(f"""
+            UPDATE today_signals SET {set_clause} WHERE message_id = ?
+        """, values)
+        cursor.execute(f"""
+            UPDATE all_signals SET {set_clause} WHERE message_id = ?
+        """, values)
+
+        conn.commit()
+        return {"status": "success", "message": "Signal updated"}
+
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+    finally:
+        conn.close()
+
+@app.post("/api/signals")
+async def add_signal(request: Request):
+    try:
+        data = await request.json()
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        fields = list(data.keys())
+        values = list(data.values())
+
+        placeholders = ", ".join(["?"] * len(fields))
+        columns = ", ".join(fields)
+
+        # Insert into both tables
+        cursor.execute(f"""
+            INSERT INTO today_signals ({columns}) VALUES ({placeholders})
+        """, values)
+        cursor.execute(f"""
+            INSERT INTO all_signals ({columns}) VALUES ({placeholders})
+        """, values)
+
+        conn.commit()
+        return {"status": "success", "message": "Signal added"}
+
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+    finally:
+        conn.close()
+
+@app.delete("/api/signals/{message_id}")
+def delete_signal(message_id: int):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("DELETE FROM today_signals WHERE message_id = ?", (message_id,))
+        cursor.execute("DELETE FROM all_signals WHERE message_id = ?", (message_id,))
+        conn.commit()
+
+        return {"status": "success", "message": f"Signal {message_id} deleted"}
+
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+    finally:
+        conn.close()
 
 @app.post("/api/bots/start")
 def start_bot(req: StartBotRequest):
