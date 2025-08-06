@@ -41,7 +41,8 @@ export const settingsApi = {
   updateBaseSettings: (data: any) => api.put('/api/settings/base', data),
   getTodayProfit: () => api.get('/api/settings/today-profit'),
   getTradingStatus: () => api.get('/api/settings/trading-status'),
-  stopTradingBots: () => api.post('/api/settings/stop-trading'),
+  stopTrading: () => api.post('/api/settings/stop-trading'),
+  resumeTrading: () => api.post('/api/settings/resume-trading'),
 };
 
 // Channels

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useEffect } from 'react';
 import Header from '@/components/layout/Header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { BaseSettings } from '@/lib/types';
+import { settingsApi } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
 import { Save, RefreshCw, DollarSign, Target, Shield, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
@@ -17,14 +19,21 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Settings } from 'lucide-react';
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState<BaseSettings>({
-    base_amount: 25,
-    daily_profit_target: 500,
-    max_loss_percent: 10,
-    balance_reference: 1000,
-    current_balance: 1250.50
-  });
+  
+  useEffect(() => {
+    fetchSettings();
+  }, []);
 
+  const [settings, setSettings] = useState<BaseSettings>({
+    base_amount: 0,
+    daily_profit_target: 0,
+    max_loss_percent: 0,
+    balance_reference: 0,
+    current_balance: 0,
+    min_payout_percent: 0,
+    trading_mode: '',
+    max_martingale_level: 0,
+  });
   const [tradingMode, setTradingMode] = useState<'demo' | 'live'>('demo');
   const [payoutThreshold, setPayoutThreshold] = useState(75);
   const [enablePayoutFilter, setEnablePayoutFilter] = useState(true);
@@ -32,11 +41,33 @@ export default function SettingsPage() {
   const [maxMartingaleLevels, setMaxMartingaleLevels] = useState(3);
   const [isLoading, setIsLoading] = useState(false);
 
+  const fetchSettings = async () => {
+    setIsLoading(true);
+    try {
+      const res = await settingsApi.getBaseSettings();
+      const data = res.data;
+      setSettings({
+        base_amount: data.base_amount,
+        daily_profit_target: data.daily_profit_target,
+        max_loss_percent: data.max_loss_percent,
+        balance_reference: data.balance_reference,
+        current_balance: data.current_balance,
+        min_payout_percent: data.min_payout_percent,
+        trading_mode: data.trading_mode,
+        max_martingale_level: data.max_martingale_level,
+      });
+    } catch (error) {
+      toast.error('Failed to load settings');
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSaveSettings = async () => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await settingsApi.updateBaseSettings(settings);
       toast.success('Settings saved successfully');
     } catch (error) {
       toast.error('Failed to save settings');
@@ -49,9 +80,12 @@ export default function SettingsPage() {
     setSettings({
       base_amount: 10,
       daily_profit_target: 100,
-      max_loss_percent: 5,
+      max_loss_percent: 10,
       balance_reference: 1000,
-      current_balance: settings.current_balance // Keep current balance
+      current_balance: settings.current_balance, // Keep current balance
+      min_payout_percent: 70,
+      trading_mode: 'demo',
+      max_martingale_level: 3,
     });
     setPayoutThreshold(80);
     setMaxMartingaleLevels(3);
@@ -90,7 +124,7 @@ export default function SettingsPage() {
             <RefreshCw className="h-4 w-4 mr-2" />
             Reset to Defaults
           </Button>
-          <Button onClick={handleSaveSettings} disabled={isLoading}>
+          <Button variant="success" onClick={handleSaveSettings} disabled={isLoading}>
             <Save className="h-4 w-4 mr-2" />
             {isLoading ? 'Saving...' : 'Save Settings'}
           </Button>
@@ -122,7 +156,7 @@ export default function SettingsPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="trading_mode">Trading Mode</Label>
-                <Select value={tradingMode} onValueChange={(value: 'demo' | 'live') => setTradingMode(value)}>
+                <Select value={settings.trading_mode} onValueChange={(value: 'demo' | 'live') => setTradingMode(value)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -234,7 +268,7 @@ export default function SettingsPage() {
                 <Input
                   id="payout_threshold"
                   type="number"
-                  value={payoutThreshold}
+                  value={settings.min_payout_percent}
                   onChange={(e) => setPayoutThreshold(parseFloat(e.target.value))}
                   min="0"
                   max="100"
@@ -268,8 +302,6 @@ export default function SettingsPage() {
                     <SelectItem value="1">1 Level</SelectItem>
                     <SelectItem value="2">2 Levels</SelectItem>
                     <SelectItem value="3">3 Levels</SelectItem>
-                    <SelectItem value="4">4 Levels</SelectItem>
-                    <SelectItem value="5">5 Levels</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-gray-500">Maximum number of martingale attempts</p>

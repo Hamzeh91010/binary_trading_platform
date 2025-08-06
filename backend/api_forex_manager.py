@@ -101,7 +101,7 @@ def calculate_trading_status():
         cursor.execute("""
             SELECT COALESCE(SUM(total_profit), 0) as today_profit
             FROM today_signals 
-            WHERE DATE(created_at) = ?
+            WHERE DATE(received_at) = ?
         """, (today,))
         
         today_profit_result = cursor.fetchone()
@@ -161,6 +161,7 @@ def calculate_trading_status():
             "trading_allowed": True,
             "stop_reason": "Error calculating status"
         }
+
 
 @app.get("/api/signals/today")
 def get_today_signals():
@@ -283,6 +284,7 @@ def delete_signal(message_id: int):
     finally:
         conn.close()
 
+
 @app.post("/api/bots/start")
 def start_bot(req: StartBotRequest):
     if req.botId in processes and processes[req.botId]["proc"].poll() is None:
@@ -365,6 +367,7 @@ def status():
 def health():
     return {"status": "ok"}
 
+
 @app.get("/api/settings/trading-status")
 def get_trading_status():
     """Get current trading status with profit/loss calculations"""
@@ -423,6 +426,7 @@ async def resume_trading(req: Request):
         
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
 
 @app.get("/api/channels", response_model=List[dict])
 def get_channels():
@@ -506,7 +510,69 @@ def delete_channel(id: int):
 
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
-    
+
+
+@app.get("/api/settings/base")
+def get_base_settings():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT base_amount, daily_profit_target, max_loss_percent, balance_reference, current_balance, min_payout_percent, trading_mode, max_martingale_level 
+            FROM base_setting LIMIT 1
+        """)
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Base settings not found")
+        keys = [desc[0] for desc in cursor.description]
+        return dict(zip(keys, row))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+@app.put("/api/settings/base")
+async def update_base_settings(req: Request):
+    try:
+        data = await req.json()
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        fields = ['base_amount', 'daily_profit_target', 'max_loss_percent', 'balance_reference', 'current_balance', 'min_payout_percent', 'trading_mode', 'max_martingale_level']
+        set_clause = ", ".join([f"{f} = ?" for f in fields if f in data])
+        values = [data[f] for f in fields if f in data]
+
+        if not set_clause:
+            raise HTTPException(status_code=400, detail="No valid fields to update")
+
+        cursor.execute(f"""
+            UPDATE base_setting SET {set_clause}
+        """, values)
+
+        conn.commit()
+        return {"status": "success", "message": "Settings updated"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+@app.get("/api/settings/today-profit")
+def get_today_profit():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        today = datetime.now().strftime('%Y-%m-%d')
+        cursor.execute("""
+            SELECT COALESCE(SUM(total_profit), 0) FROM today_signals WHERE DATE(received_at) = ?
+        """, (today,))
+        profit = cursor.fetchone()[0]
+        return {"today_profit": float(profit)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

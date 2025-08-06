@@ -41,12 +41,12 @@ export default function Header({ title, subtitle, onRefresh, isLoading }: Header
       // Check if status changed and show notifications
       if (tradingStatus && newStatus) {
         // Check if trading was stopped due to loss limit
-        if (!tradingStatus.should_stop_trading && newStatus.should_stop_trading && newStatus.current_profit < 0) {
+        if (!tradingStatus.should_stop_trading && newStatus.should_stop_trading && newStatus.today_profit < 0) {
           toast.error(`Trading stopped! Loss limit reached: ${formatPercent(newStatus.current_loss_percent)}%`);
         }
         
         // Check if daily profit target was reached
-        if (newStatus.current_profit > 0 && newStatus.current_profit >= newStatus.daily_profit_target) {
+        if (newStatus.today_profit > 0 && newStatus.today_profit >= newStatus.daily_profit_target) {
           toast.success(`Daily profit target reached: ${formatCurrency(newStatus.current_profit)}`);
         }
       }
@@ -73,7 +73,7 @@ export default function Header({ title, subtitle, onRefresh, isLoading }: Header
 
   const handleStopTrading = async () => {
     try {
-      await settingsApi.stopTradingBots();
+      await settingsApi.stopTrading();
       toast.success('Trading bots stopped successfully');
       fetchTradingStatus(); // Refresh status
     } catch (error) {
@@ -81,30 +81,40 @@ export default function Header({ title, subtitle, onRefresh, isLoading }: Header
     }
   };
 
+  const handleResumeTrading = async () => {
+    try {
+      await settingsApi.resumeTrading();
+      toast.success('Trading bots resumed successfully');
+      fetchTradingStatus(); // Refresh status
+    } catch (error) {
+      toast.error('Failed to resume trading bots');
+    }
+  };
+
   const getTradingStatusBadge = () => {
     if (!tradingStatus) return null;
 
-    if (tradingStatus.should_stop_trading) {
-      return (
-        <Badge className="bg-red-600 text-white hover:bg-red-700">
-          <AlertCircle className="w-3 h-3 mr-1" />
-          Trading Stopped
-        </Badge>
-      );
-    }
+    // if (tradingStatus.should_stop_trading) {
+    //   return (
+    //     <Badge className="bg-red-600 text-white hover:bg-red-700">
+    //       <AlertCircle className="w-3 h-3 mr-1" />
+    //       Trading Stopped
+    //     </Badge>
+    //   );
+    // }
 
-    if (tradingStatus.current_profit > 0) {
+    if (tradingStatus.today_profit > 0) {
       return (
         <Badge className="bg-green-600 text-white hover:bg-green-700">
           <TrendingUp className="w-3 h-3 mr-1" />
-          Profit: {formatCurrency(tradingStatus.current_profit)}
+          Profit: {formatCurrency(tradingStatus.today_profit)}
         </Badge>
       );
-    } else if (tradingStatus.current_profit < 0) {
+    } else if (tradingStatus.today_profit < 0) {
       return (
         <Badge className="bg-red-600 text-white hover:bg-red-700">
           <TrendingDown className="w-3 h-3 mr-1" />
-          Loss: {formatCurrency(Math.abs(tradingStatus.current_profit))}
+          Loss: {formatCurrency(Math.abs(tradingStatus.today_profit))}
         </Badge>
       );
     }
@@ -162,16 +172,38 @@ export default function Header({ title, subtitle, onRefresh, isLoading }: Header
         )}
 
         {/* Emergency Stop Button */}
-        {tradingStatus && !tradingStatus.should_stop_trading && (
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleStopTrading}
-            className="flex items-center space-x-1"
-          >
-            <AlertCircle className="w-4 h-4" />
-            <span>Stop Trading</span>
-          </Button>
+        {tradingStatus && (
+          <>
+            {tradingStatus.should_stop_trading ? (
+              <>
+                {/* Resume Trading Button (if manually stopped) */}
+                {tradingStatus.stop_reason === 'Manually stopped' && (
+                  <Button
+                    variant="success"
+                    size="sm"
+                    onClick={handleResumeTrading}
+                    className="flex items-center space-x-1"
+                  >
+                    <TrendingUp className="w-4 h-4" />
+                    <span>Resume Trading</span>
+                  </Button>
+                )}
+              </>
+            ) : (
+              <>
+                {/* Stop Trading Button */}
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleStopTrading}
+                  className="flex items-center space-x-1"
+                >
+                  <AlertCircle className="w-4 h-4" />
+                  <span>Stop Trading</span>
+                </Button>
+              </>
+            )}
+          </>
         )}
 
         {/* Refresh Button */}

@@ -9,7 +9,7 @@ export interface TradingStatus {
   profit_target_reached: boolean;
   loss_limit_reached: boolean;
   trading_allowed: boolean;
-  stop_reason?: string;
+  stop_reason: string;
 }
 
 export interface Signal {
@@ -42,6 +42,9 @@ export interface BaseSettings {
   max_loss_percent: number;
   balance_reference: number;
   current_balance: number;
+  min_payout_percent: number;
+  trading_mode: string;
+  max_martingale_level: number;
 }
 
 export interface Bot {
